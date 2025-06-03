@@ -6,13 +6,19 @@
 Queue* init(void) {
 	Queue* q = new Queue; //메모리 할당? 해주고
 	q->head = nullptr;
-	q->tail = nullptr;
 	return q;
 }
 
 
 void release(Queue* queue) {
-	return;
+	Node* free = queue->head;
+
+	//노드가 많으니 반복문
+	while (free) {
+		Node* nextfree = free->next;
+		delete free; //얘만 nfree에 둘까..?
+		free = nextfree;
+	}
 }
 
 
@@ -38,23 +44,44 @@ Node* nclone(Node* node) {
 Reply enqueue(Queue* queue, Item item) {
 	Reply reply = { false, NULL };
 	Node* inode = nalloc(item); //일단 노드 생성 하고
+
 	//1. 이 아이템이? 처음 들어가냐(최초의 노든가?) 
 	if (queue->head == nullptr) {
 		queue->head = inode;
-		queue->tail = inode;
 	}
-	// //2. 노드가 있다면 계속 추가.. 
 	else {
-		queue->tail->next = inode;
-		queue->tail = inode;
+		Node* bef = nullptr;
+		Node* now = queue->head;
+		while (now != nullptr && now->item.key <= item.key) {
+			bef = now;
+			now = now->next;
+		}
+		if (bef == nullptr) {
+			inode->next = queue->head;
+			queue->head = inode;
+		}
+		else {
+			inode->next = now;
+			bef->next = inode;
+		}
 	}
-
 	reply.success = true; //연산 수행완료
+	reply.item = item;
 	return reply;
 }
 
 Reply dequeue(Queue* queue) {
-	Reply reply = { false, NULL };
+	if (queue->head == nullptr) 
+	{
+		Reply reply = { false, NULL };
+		return reply;
+	}
+	Node* del = queue->head;
+	queue->head = queue->head->next;
+
+	Item a = del->item;
+	delete del;
+	Reply reply = { true, a };
 	return reply;
 }
 
