@@ -24,9 +24,9 @@ void release(Queue* queue) {
 
 Node* nalloc(Item item) {
 	// Node 생성, item으로 초기화
-	Node* node = new Node; //메모리 공간에 노드 할당하고!
-	node->item = item; //데이터 넣고!
-	node->next = nullptr; //초기화!
+	Node* node = new Node; //메모리 공간에 노드 할당하고
+	node->item = item; //데이터 넣고
+	node->next = nullptr; //초기화
 	return node;
 }
 
@@ -35,12 +35,37 @@ void nfree(Node* node) {
 	return;
 }
 
-
+//원본을 삭제해도 복사본이 남게 깊은복사를 해라..?
 Node* nclone(Node* node) {
-	return NULL;
+
+	if (node == nullptr) {
+		return nullptr;
+	}
+	Item item;
+	//키복사
+	item.key = node->item.key;
+
+	// 일단 타입변환
+	int* original = (int*)node->item.value;
+
+	//잘 되었는지확인
+	if (original != nullptr) {
+
+		//형변환한 포인터를 담을 변수 만들어주고?
+		int* i = new int;
+		//깊은 복사
+		*i = *original;
+
+		//썻으니 재변환
+		item.value = (void*)i;
+	}
+	else {
+		item.value = nullptr;
+	}
+	return nalloc(item);
 }
 
-
+// 키가 이미 존재하면 덮어쓰기를 해라..?
 Reply enqueue(Queue* queue, Item item) {
 	Reply reply = { false, NULL };
 	Node* inode = nalloc(item); //일단 노드 생성 하고
@@ -52,7 +77,15 @@ Reply enqueue(Queue* queue, Item item) {
 	else {
 		Node* bef = nullptr;
 		Node* now = queue->head;
+
 		while (now != nullptr && now->item.key <= item.key) {
+			// 여기다 조건을 하나 더 넣어야함
+			//(key=10, value="abc"), (key=10, value="xyz")가 차례로 수행된다면, 즉 키가 같다면
+			if (now->item.key == item.key) {
+				//value만 덮어써라
+				now->item.value = item.value;
+				return { true, item };
+			}
 			bef = now;
 			now = now->next;
 		}
@@ -85,6 +118,18 @@ Reply dequeue(Queue* queue) {
 	return reply;
 }
 
+//키의 시작부터 끝까지 복사..
 Queue* range(Queue* queue, Key start, Key end) {
-	return NULL;
+	//새로운 큐 만들고 처음노드 시작.
+	Queue* nq = init();
+	Node* now = queue->head;
+	//반복
+	while (now) {
+		// 현재 노드가 키의 범위
+		if (now->item.key >= start && now->item.key <= end) {
+			nclone(now); //깊은복사
+		}
+		now = now->next;
+	}
+	return nq;
 }
