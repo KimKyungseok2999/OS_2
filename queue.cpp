@@ -2,7 +2,6 @@
 #include "queue.h"
 #include "qtype.h"
 
-
 Queue* init(void) {
 	Queue* q = new Queue; //메모리 할당? 해주고
 	q->head = nullptr;
@@ -13,7 +12,7 @@ Queue* init(void) {
 void release(Queue* queue) {
 	Node* free = queue->head;
 
-	//노드가 많으니 반복문
+	//순차적으로 해제
 	while (free) {
 		Node* nextfree = free->next;
 		nfree(free);
@@ -33,11 +32,14 @@ Node* nalloc(Item item) {
 
 void nfree(Node* node) {
 	if (node != nullptr) {
-		if (node->item.value != nullptr)
-			delete (int*)(node->item.value);
+		if (node->item.value != nullptr && node->item.value_size > 0) 
+		{
+			free(node->item.value);
+		}
 		delete node;
 	}
 }
+
 
 //원본을 삭제해도 복사본이 남게 깊은복사를 해라..?
 Node* nclone(Node* node) {
@@ -45,23 +47,17 @@ Node* nclone(Node* node) {
 	if (node == nullptr) {
 		return nullptr;
 	}
-	Item item;
+	Item item{};
 	//키복사
 	item.key = node->item.key;
 
-	// 일단 타입변환
-	int* original = (int*)node->item.value;
+	// 사이즈 복사
+	item.value_size = node->item.value_size;
 
-	//잘 되었는지확인
-	if (original != nullptr) {
-
-		//형변환한 포인터를 담을 변수 만들어주고?
-		int* i = new int;
-		//깊은 복사
-		*i = *original;
-
-		//썻으니 재변환
-		item.value = (void*)i;
+	if (node->item.value != nullptr && item.value_size > 0) {
+		void* cash = malloc(item.value_size);
+		memcpy(cash, node->item.value, item.value_size);
+		item.value = cash;
 	}
 	else {
 		item.value = nullptr;
@@ -89,10 +85,12 @@ Reply enqueue(Queue* queue, Item item) {
 			if (now->item.key == item.key) {
 
 				if (now->item.value)
-					delete (int*)now->item.value;
+					free(now->item.value);
 
 				//value만 덮어써라
 				now->item.value = item.value;
+				now->item.value_size = item.value_size; //사이즈도 추가
+
 				//inode생성을 했는데 기존노드만 덮어쓴거면 지워야하지 않나..
 				delete inode;
 				queue->lock.unlock();
@@ -118,7 +116,7 @@ Reply enqueue(Queue* queue, Item item) {
 
 Reply dequeue(Queue* queue) {
 	queue->lock.lock();
-	if (queue->head == nullptr) 
+	if (queue->head == nullptr)
 	{
 		Reply reply = { false, NULL };
 		queue->lock.unlock();
@@ -128,7 +126,7 @@ Reply dequeue(Queue* queue) {
 	queue->head = queue->head->next;
 
 	Item a = del->item;
-	delete del;
+	nfree(del);
 	Reply reply = { true, a };
 	queue->lock.unlock();
 	return reply;
